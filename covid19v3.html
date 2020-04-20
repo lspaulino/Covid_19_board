@@ -1,0 +1,323 @@
+<html>
+
+<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/highcharts-more.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/modules/export-data.js"></script>
+<script src="https://code.highcharts.com/modules/accessibility.js"></script>
+
+<style>
+
+	.highcharts-figure, .highcharts-data-table table {
+		min-width: 310px;
+		max-width: 1000px;
+		margin: 1em auto;
+	}
+
+	#container, #container_BR {
+		height: 600px;
+	}
+
+	.highcharts-tooltip h3 {
+		margin: 0.3em 0;
+	}
+
+	.highcharts-data-table table {
+		font-family: Verdana, sans-serif;
+		border-collapse: collapse;
+		border: 1px solid #EBEBEB;
+		margin: 10px auto;
+		text-align: left;
+		width: 100%;
+		max-width: 500px;
+	}
+	.highcharts-data-table caption {
+		padding: 1em 0;
+		font-size: 1.2em;
+		color: #555;
+	}
+	.highcharts-data-table th {
+		font-weight: 600;
+		padding: 0.5em;
+	}
+	.highcharts-data-table td, .highcharts-data-table th, .highcharts-data-table caption {
+		padding: 0.5em;
+	}
+	.highcharts-data-table thead tr, .highcharts-data-table tr:nth-child(even) {
+		background: #f8f8f8;
+	}
+	.highcharts-data-table tr:hover {
+		background: #f1f7ff;
+	}
+
+</style>
+
+<script>
+	
+function gerar(){	
+
+	var cod_ue = $('#combo').val();
+
+	var dados = [];
+
+	var graph1;
+
+	var url_ue = "https://brasil.io/api/dataset/covid19/caso/data?state="+cod_ue+"&place_type=state&format=json&is_last=True";
+
+	var url = "https://brasil.io/api/dataset/covid19/caso/data?state="+cod_ue+"&place_type=city&format=json&is_last=True";
+
+
+	fetch(url_ue).then(response => response.json()).then(commits => {
+
+		var ue = {name: 'Estado', data: [], color: '#f00'};
+
+		$.each(commits.results, function(index, value) {
+
+			ue.data.push({ x: value.confirmed, y: value.confirmed_per_100k_inhabitants, z: value.death_rate*100, mortes: value.deaths, name: value.state , dia: value.date, ppl: value.estimated_population_2019});
+
+		});
+
+		dados.push(ue);
+
+	});
+
+
+	fetch(url).then(response => response.json()).then(commits => {
+  	//alert(JSON.stringify(commits.results))
+
+		var st = true;
+		if (cod_ue == '')
+			st = false;
+		var city = {name: 'Cidades', data: [], visible: st};
+
+		$.each(commits.results, function(index, value) {
+
+			city.data.push({ x: value.confirmed, y: value.confirmed_per_100k_inhabitants, z: value.death_rate*100, mortes: value.deaths, name: value.city , dia: value.date, ppl: value.estimated_population_2019});
+		  
+		});
+
+		dados.push(city);
+
+		//alert(JSON.stringify(dados));
+
+
+		graph1 = Highcharts.chart('container', {
+
+			chart: {
+			  type: 'bubble',
+			  plotBorderWidth: 1,
+			  zoomType: 'xy'
+			},
+
+			legend: {
+			  enabled: true
+			},
+
+			title: {
+			  text: 'Casos Confirmados/Mortes por Covid-19 em ' + cod_ue
+			},
+
+			subtitle: {
+			  text: 'Fonte: <a href="https://brasil.io/dataset/covid19/caso?search=&date=&state='+cod_ue+'&city=&place_type=&is_last=True&city_ibge_code=&order_for_place=">Brasil IO</a>'
+			},
+
+			xAxis: {
+			  gridLineWidth: 1,
+			  title: {
+				  text: 'Confirmados'
+			  },
+			  labels: {
+				  format: '{value}'
+			  }
+			},
+
+			yAxis: {
+			  startOnTick: false,
+			  endOnTick: false,
+			  title: {
+				  text: 'Confirmados por 100k'
+			  },
+			  labels: {
+				  format: '{value}'
+			  },
+			  maxPadding: 0.2
+			},
+
+			tooltip: {
+			  useHTML: true,
+			  headerFormat: '<table style="font-size:11px">',
+			  pointFormat: '<tr><th colspan="2"><h3>{point.name}</h3></th></tr>' +
+				  '<tr><th align=left>Confirmados:</th><td>{point.x}</td></tr>' +
+				  '<tr><th align=left>Confirmados por 100k:</th><td>{point.y}</td></tr>' +
+				  '<tr><th align=left><nobr>Pop. est. 2019 (IBGE):</nobr></th><td>{point.ppl}</td></tr>' +
+				  '<tr><th align=left>Mortes:</th><td>{point.mortes}</td></tr>' +
+				  '<tr><th align=left>Mortes (%):</th><td>{point.z}%</td></tr>'+
+				  '<tr><th align=left>Atualização:</th><td><nobr>{point.dia}</nobr></td></tr>',
+			  footerFormat: '</table>',
+			  followPointer: true
+			},
+
+			plotOptions: {
+			  series: {
+				  dataLabels: {
+					  enabled: true,
+					  format: '{point.name}'
+				  }
+			  }
+			},
+
+			series: dados
+
+		});
+
+	});
+
+}
+
+//----------------------------------------------------------
+
+function gerar_BR(){
+	
+	var dados2 = [];
+	
+	var categorias = [];
+
+	var graph2;
+
+	var url = "https://api.covid19api.com/dayone/country/Brazil";
+
+
+	fetch(url).then(response => response.json()).then(commits => {
+
+		var confirmados = {name: 'Casos Confirmados', data: [], color: '#f00', yAxis: 0};
+		
+		var mortes = {name: 'Mortes', data: [], color: '#000', yAxis: 0};
+		
+		var recuperados = {name: 'Recuperados', data: [], color: '#0f0', yAxis: 0};		
+		
+		var percentual = {name: 'Mortes/Confirmados', data: [], yAxis: 1};
+
+		$.each(commits, function(index, value) {
+			
+			categorias.push(value.Date.substring(0,10));
+			
+			confirmados.data.push(value.Confirmed);
+			mortes.data.push(value.Deaths);
+			recuperados.data.push(value.Recovered);
+			percentual.data.push(+(value.Deaths/value.Confirmed*100).toFixed(2));
+
+		});
+
+		dados2.push(confirmados);
+		dados2.push(mortes);
+		dados2.push(recuperados);
+		dados2.push(percentual);
+				
+		graph2 = Highcharts.chart('container_BR', {
+			chart: {
+				type: 'spline'
+			},
+			title: {
+				text: 'Casos Confirmados/Mortes por Covid-19 no Brasil'
+			},
+			subtitle: {
+				text: 'Fonte: <a href="https://api.covid19api.com/dayone/country/Brazil">COVID19 API</a>'
+			},
+			xAxis: {
+				categories: categorias
+			},
+			yAxis: [{
+					title: {
+						text: 'Confirmados/Curados/Mortes'
+					}
+				}, {				
+					title: {
+						text: 'Percentual de Mortes/Confirmados'
+					},
+					labels: {
+						format: '{value}%'
+					},
+					opposite: true
+				}
+			],
+			tooltip: {
+			  shared:true
+			},
+			series: dados2
+		});
+
+	});	
+	
+}
+
+
+gerar_BR();
+
+</script>
+
+<body>
+	
+	<select id=combo>
+		<optgroup label="Norte">
+			<option value=AC>AC</option>
+			<option value=AM>AM</option>
+			<option value=AP>AP</option>
+			<option value=PA>PA</option>
+			<option value=RO>RO</option>
+			<option value=RR>RR</option>
+			<option value=TO>TO</option>
+		</optgroup>
+		<optgroup label="Nordeste">
+			<option value=AL>AL</option>
+			<option value=BA>BA</option>
+			<option value=CE>CE</option>
+			<option value=MA>MA</option>
+			<option value=PB>PB</option>
+			<option value=PE>PE</option>
+			<option value=PI>PI</option>
+			<option value=RN>RN</option>
+			<option value=SE>SE</option>
+		</optgroup>
+		<optgroup label="Sudeste">
+			<option value=ES>ES</option>
+			<option value=MG>MG</option>
+			<option value=RJ>RJ</option>
+			<option value=SP>SP</option>
+		</optgroup>
+		<optgroup label="Sul">
+			<option value=PR>PR</option>
+			<option value=RS>RS</option>
+			<option value=SC>SC</option>
+		</optgroup>
+		<optgroup label="Centro-Oeste">
+			<option value=DF>DF</option>
+			<option value=GO>GO</option>
+			<option value=MS>MS</option>
+			<option value=MT>MT</option>
+		</optgroup>
+		<optgroup label="Brasil">
+			<option value='' selected>Todos</option>
+		</optgroup>
+	</select> 
+	
+	<button onclick=gerar()>Gerar</button>
+	
+	<hr>
+
+	<figure class="highcharts-figure">
+		<div id="container"></div>
+	</figure>
+	
+	<hr>
+	
+	<figure class="highcharts-figure">
+		<div id="container_BR"></div>
+	</figure>
+
+</body>
+
+
+
+</html>
